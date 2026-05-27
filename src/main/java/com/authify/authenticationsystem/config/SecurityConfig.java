@@ -5,6 +5,7 @@ import com.authify.authenticationsystem.service.AppUserDetailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -20,7 +21,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
 import java.util.List;
-import org.springframework.context.annotation.Bean;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -29,6 +29,25 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
+
+    private static final String[] PUBLIC_URLS = {
+            "/login",
+            "/login/**",
+            "/register",
+            "/register/**",
+            "/send-reset-otp",
+            "/send-reset-otp/**",
+            "/reset-password",
+            "/reset-password/**",
+            "/api/v1.0/login",
+            "/api/v1.0/login/**",
+            "/api/v1.0/register",
+            "/api/v1.0/register/**",
+            "/api/v1.0/send-reset-otp",
+            "/api/v1.0/send-reset-otp/**",
+            "/api/v1.0/reset-password",
+            "/api/v1.0/reset-password/**"
+    };
 
 
     private final AppUserDetailService appUserDetailService;
@@ -42,12 +61,8 @@ public class SecurityConfig {
         http.cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/login",
-                                "/register",
-                                "/send-reset-otp",
-                                "/reset-password"
-                        ).permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(PUBLIC_URLS).permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

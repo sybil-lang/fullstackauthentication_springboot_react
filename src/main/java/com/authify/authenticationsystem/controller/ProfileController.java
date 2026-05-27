@@ -3,6 +3,7 @@ package com.authify.authenticationsystem.controller;
 
 import com.authify.authenticationsystem.io.ProfileRequest;
 import com.authify.authenticationsystem.io.ProfileResponse;
+import com.authify.authenticationsystem.service.EmailService;
 import com.authify.authenticationsystem.service.ProfileService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 public class ProfileController {
 
     private final ProfileService profileService;
+    private final EmailService emailService;
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
@@ -22,7 +24,7 @@ public class ProfileController {
 
         ProfileResponse response = profileService.createProfile(request);
 
-        // TODO: send welcome email
+       emailService.sendWelcomeMail(response.getEmail(),response.getName());
         return response;
     }
 

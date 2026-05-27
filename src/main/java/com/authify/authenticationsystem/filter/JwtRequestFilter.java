@@ -29,7 +29,20 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
 
 
-    private static final List<String> PUBLIC_URLS= List.of("/login","/register","/send-reset-otp","/reset-password","/logout");
+    private static final List<String> PUBLIC_URLS = List.of(
+            "/api/v1.0/login",
+            "/api/v1.0/register",
+            "/api/v1.0/send-reset-otp",
+            "/api/v1.0/reset-password",
+            "/api/v1.0/logout"
+    );
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        System.out.println("PATH = " + request.getRequestURI());
+        return isPublicRequest(request);
+    }
+
     /**
      * This method executes once for every incoming request.
      * It checks:
@@ -44,102 +57,145 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-
-
-        String path=request.getServletPath();
-        if(PUBLIC_URLS.contains(path)){
-            filterChain.doFilter(request,response);
-            return;
-        }
-
+        System.out.println("inside doFilterInternal");
         String jwt = null;
         String email = null;
 
+        try {
 
-        //1. Get Authorization Header
-        // Example:
-        // Authorization: Bearer eyJhbGciOiJIUzI1NiJ9....
-        final String authorizationHeader = request.getHeader("Authorization");
+            /**
+             * =====================================================
+             * 1. Check JWT Token in Authorization Header
+             * =====================================================
+             *
+             * Example:
+             * Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
+             */
+            final String authorizationHeader =
+                    request.getHeader("Authorization");
 
+            if (authorizationHeader != null &&
+                    authorizationHeader.startsWith("Bearer ")) {
 
+                // Extract JWT Token
+                jwt = authorizationHeader.substring(7);
 
-        /**
-         * Check whether Authorization header exists
-         * and starts with "Bearer "
-         */
-        if (authorizationHeader != null &&  authorizationHeader.startsWith("Bearer ")) {
+                // Extract Email from JWT
+                email = jwtUtil.extractEmail(jwt);
+            }
 
-            // Extract token after "Bearer "
-            jwt = authorizationHeader.substring(7);
+            /**
+             * =====================================================
+             * 2. If JWT not found in Header, check Cookies
+             * =====================================================
+             */
+            if (jwt == null) {
 
-            // Extract email/username from token
-            email = jwtUtil.extractEmail(jwt);
-        }
+                Cookie[] cookies = request.getCookies();
 
-        //2. if not found in header check in cookies
-        if(jwt==null){
-            Cookie[] cookies=request.getCookies();
-            if(cookies!=null){
-                for (Cookie cookie : cookies) {
-                    if("jwt".equals(cookie.getName())){
-                        jwt = cookie.getValue();
-                        break;
+                if (cookies != null) {
+
+                    for (Cookie cookie : cookies) {
+
+                        // Find JWT Cookie
+                        if ("jwt".equals(cookie.getName())) {
+
+                            // Extract JWT from Cookie
+                            jwt = cookie.getValue();
+
+                            // Extract Email from JWT
+                            email = jwtUtil.extractEmail(jwt);
+
+                            break;
+                        }
                     }
                 }
             }
-        }
-
-        /**
-         * If email exists and user is not already authenticated
-         */
-        if (email != null &&  SecurityContextHolder.getContext().getAuthentication() == null) {
-
-            // Load user from database
-            UserDetails userDetails = appUserDetailService.loadUserByUsername(email);
 
             /**
-             * Validate token
-             * Checks:
-             * 1. Username matches
-             * 2. Token not expired
+             * =====================================================
+             * 3. Authenticate User
+             * =====================================================
              */
-            if (jwtUtil.validateToken(jwt, userDetails)) {
+            if (email != null &&
+                    SecurityContextHolder.getContext()
+                            .getAuthentication() == null) {
+
+                // Load User from Database
+                UserDetails userDetails =
+                        appUserDetailService
+                                .loadUserByUsername(email);
 
                 /**
-                 * Create Authentication Token
-                 *
-                 * Parameters:
-                 * 1. UserDetails object
-                 * 2. Credentials (null because password already validated)
-                 * 3. Authorities/Roles
+                 * Validate JWT Token
                  */
-                UsernamePasswordAuthenticationToken authenticationToken =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
-                        );
+                if (jwtUtil.validateToken(jwt, userDetails)) {
 
-                /**
-                 * Add request details
-                 * مثل IP Address / Session ID etc.
-                 */
-                authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    /**
+                     * Create Authentication Object
+                     */
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
 
-                /**
-                 * Set authentication in Security Context
-                 *
-                 * After this step Spring Security understands
-                 * that the user is authenticated.
-                 */
-                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+                    /**
+                     * Add Request Details
+                     */
+                    authToken.setDetails(
+                            new WebAuthenticationDetailsSource()
+                                    .buildDetails(request)
+                    );
+
+                    /**
+                     * Set Authentication in Security Context
+                     */
+                    SecurityContextHolder.getContext()
+                            .setAuthentication(authToken);
+                }
             }
+
+        } catch (Exception ex) {
+
+            /**
+             * =====================================================
+             * Invalid JWT Token
+             * =====================================================
+             */
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+
+            response.setContentType("application/json");
+
+            response.getWriter().write(
+                    """
+                    {
+                        "error": "Unauthorized",
+                        "message": "Invalid or expired JWT token"
+                    }
+                    """
+            );
+
+            return;
         }
 
         /**
-         * Continue filter chain
-         * Pass request to next filter
+         * =====================================================
+         * Continue Filter Chain
+         * =====================================================
          */
         filterChain.doFilter(request, response);
     }
+
+    private boolean isPublicRequest(HttpServletRequest request) {
+
+        String path = request.getRequestURI();
+
+        return PUBLIC_URLS.stream()
+                .anyMatch(publicUrl ->
+                        path.equals(publicUrl)
+                                || path.startsWith(publicUrl + "/"));
+    }
+
 }
