@@ -39,7 +39,6 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        System.out.println("PATH = " + request.getRequestURI());
         return isPublicRequest(request);
     }
 

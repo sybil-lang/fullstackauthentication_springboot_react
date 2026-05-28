@@ -2,9 +2,11 @@ package com.authify.authenticationsystem.controller;
 
 import com.authify.authenticationsystem.io.AuthRequest;
 import com.authify.authenticationsystem.io.AuthResponse;
+import com.authify.authenticationsystem.io.ResetPasswordRequest;
 import com.authify.authenticationsystem.service.AppUserDetailService;
 import com.authify.authenticationsystem.service.ProfileService;
 import com.authify.authenticationsystem.util.JwtUtil;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -120,6 +122,18 @@ public class AuthController {
 
         try{
             profileService.sendResetOtp(email);
+        }
+        catch (Exception ex){
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
+        }
+    }
+
+
+    @PostMapping("/reset-password")
+    public void resetPassword(@Valid @RequestBody ResetPasswordRequest request){
+
+        try{
+           profileService.resetPassword(request.getEmail(),request.getOtp(),request.getNewPassword());
         }
         catch (Exception ex){
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
