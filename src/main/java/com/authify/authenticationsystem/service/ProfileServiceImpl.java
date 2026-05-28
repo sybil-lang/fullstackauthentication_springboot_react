@@ -68,7 +68,7 @@ public class ProfileServiceImpl implements ProfileService{
             emailService.sendResetOtpEmail(existingEntity.getEmail(),otp);
         }
         catch(Exception e){
-            throw new RuntimeException("Unable to send reset OTP email");
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Unable to send reset OTP email");
         }
     }
 
@@ -77,11 +77,11 @@ public class ProfileServiceImpl implements ProfileService{
         UserEntity existingEntity=userRepository.findByEmail(email).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         if( existingEntity.getResetOtp()==null || !existingEntity.getResetOtp().equals(otp)){
-            throw new RuntimeException("Reset OTP does not match");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reset OTP does not match");
         }
 
         if(existingEntity.getResetOtpExpireAt()<System.currentTimeMillis()){
-            throw new RuntimeException("OTP expired");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "OTP expired");
         }
 
         existingEntity.setResetOtp(null);
@@ -89,7 +89,6 @@ public class ProfileServiceImpl implements ProfileService{
         existingEntity.setResetOtpExpireAt(0L);
         userRepository.save(existingEntity);
     }
-
 
     private ProfileResponse convertToProfileResponse(UserEntity newProfile) {
 
@@ -116,4 +115,76 @@ public class ProfileServiceImpl implements ProfileService{
                 .resetOtpExpireAt(0L)
                 .build();
     }
+
+
+    @Override
+    public void sendOtp(String email) {
+
+        // Find user by email
+        UserEntity existingUser = userRepository
+                .findByEmail(email)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "User not found"
+                        )
+                );
+
+        if(existingUser.getIsAccountVerified()!=null && existingUser.getIsAccountVerified()){
+            return;
+        }
+
+        //Generate 6 digit otp
+        String otp=String.valueOf(ThreadLocalRandom.current().nextInt(100000,1000000));
+
+        //calculate expiry time (current time +24 hours in milisecond)
+
+        long expiryTime=System.currentTimeMillis()+(24*60*60*1000);
+
+        existingUser.setVerifyOtp(otp);
+        existingUser.setVerifyOtpExpireAt(expiryTime);
+
+         userRepository.save(existingUser);
+
+         try{
+             emailService.sendOtpEmail(existingUser.getEmail(),otp);
+         }
+         catch(Exception e){
+             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Unable to send OTP email");
+         }
+    }
+
+
+    @Override
+    public void verifyOtp(
+            String email,
+            String otp
+    ) {
+
+        // Find user by email
+        UserEntity existingUser = userRepository
+                .findByEmail(email)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "User not found"
+                        )
+                );
+
+        if(existingUser.getVerifyOtp()==null || !existingUser.getVerifyOtp().equals(otp)){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid OTP");
+        }
+
+        if(existingUser.getVerifyOtpExpireAt()<System.currentTimeMillis()){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "OTP expired");
+        }
+
+        existingUser.setVerifyOtp(null);
+        existingUser.setVerifyOtpExpireAt(0L);
+        existingUser.setIsAccountVerified(true);
+        userRepository.save(existingUser);
+
+    }
+
+
 }

@@ -111,32 +111,55 @@ public class AuthController {
     }
 
     @GetMapping("/is-authenticated")
-    public ResponseEntity<Boolean> isAuthenticated(@CurrentSecurityContext(expression="authentication?.name")String email){
+    public ResponseEntity<Boolean> isAuthenticated(@CurrentSecurityContext(expression = "authentication?.name") String email) {
 
-        return ResponseEntity.ok(email!=null);
+        return ResponseEntity.ok(email != null);
     }
 
 
     @PostMapping("/send-reset-otp")
-    public void sendResetOtp(@RequestParam String email){
+    public void sendResetOtp(@RequestParam String email) {
+        profileService.sendResetOtp(email);
+    }
 
-        try{
-            profileService.sendResetOtp(email);
-        }
-        catch (Exception ex){
+
+    @PostMapping("/reset-password")
+    public void resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        profileService.resetPassword(request.getEmail(), request.getOtp(), request.getNewPassword());
+    }
+
+    @PostMapping("/send-otp")
+    public ResponseEntity<Boolean> sendVerifyOtp(@CurrentSecurityContext(expression = "authentication?.name") String email) {
+
+        try {
+            profileService.sendOtp(email);
+            return ResponseEntity.ok(true);
+        } catch (Exception ex) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
 
-    @PostMapping("/reset-password")
-    public void resetPassword(@Valid @RequestBody ResetPasswordRequest request){
+    @PostMapping("/verify-otp")
+    public void verifyEmail(
+            @RequestBody Map<String, Object> request,
+            @CurrentSecurityContext(
+                    expression = "authentication?.name"
+            ) String email
+    ) {
 
-        try{
-           profileService.resetPassword(request.getEmail(),request.getOtp(),request.getNewPassword());
+        // Check OTP exists in request
+        if (request.get("otp") == null) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "OTP is required"
+            );
         }
-        catch (Exception ex){
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+
+        profileService.verifyOtp(
+                email,
+                request.get("otp").toString()
+        );
     }
 }

@@ -86,4 +86,35 @@ public class EmailService {
         // Send Email
         mailSender.send(message);
     }
+
+    public void sendOtpEmail(
+            String toEmail,
+            String otp
+    ) {
+
+        // Create Email Message
+        SimpleMailMessage message = new SimpleMailMessage();
+
+        // Sender Email
+        message.setFrom(fromEmail);
+
+        // Receiver Email
+        message.setTo(toEmail);
+
+        // Email Subject
+        message.setSubject("Your OTP Verification Code");
+
+        // Email Body
+        message.setText(
+                "Hello,\n\n" +
+                        "Your OTP verification code is: " + otp + "\n\n" +
+                        "This OTP is valid for 10 minutes.\n\n" +
+                        "Please do not share this OTP with anyone.\n\n" +
+                        "Regards,\n" +
+                        "Authify Team"
+        );
+
+        // Send Email
+        mailSender.send(message);
+    }
 }
