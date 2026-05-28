@@ -8,5 +8,6 @@ public interface ProfileService {
     ProfileResponse createProfile(ProfileRequest profileRequest);;
     ProfileResponse getProfile(String email);
 
+    void sendResetOtp(String email);
 
 }

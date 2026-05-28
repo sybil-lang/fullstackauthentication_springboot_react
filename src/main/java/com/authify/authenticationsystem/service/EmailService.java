@@ -55,4 +55,35 @@ public class EmailService {
         // Send Email
         mailSender.send(message);
     }
+
+    public void sendResetOtpEmail(
+            String toEmail,
+            String otp
+    ) {
+
+        // Create Mail Message Object
+        SimpleMailMessage message = new SimpleMailMessage();
+
+        // Sender Email
+        message.setFrom(fromEmail);
+
+        // Receiver Email
+        message.setTo(toEmail);
+
+        // Email Subject
+        message.setSubject("Password Reset OTP");
+
+        // Email Body
+        message.setText(
+                "Hello,\n\n" +
+                        "Your OTP for password reset is: " + otp + "\n\n" +
+                        "This OTP is valid for 10 minutes.\n\n" +
+                        "If you did not request a password reset, please ignore this email.\n\n" +
+                        "Thank You,\n" +
+                        "Authify Team"
+        );
+
+        // Send Email
+        mailSender.send(message);
+    }
 }

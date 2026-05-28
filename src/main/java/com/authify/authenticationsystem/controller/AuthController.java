@@ -3,6 +3,7 @@ package com.authify.authenticationsystem.controller;
 import com.authify.authenticationsystem.io.AuthRequest;
 import com.authify.authenticationsystem.io.AuthResponse;
 import com.authify.authenticationsystem.service.AppUserDetailService;
+import com.authify.authenticationsystem.service.ProfileService;
 import com.authify.authenticationsystem.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -13,10 +14,10 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.annotation.CurrentSecurityContext;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -28,6 +29,7 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final AppUserDetailService appUserDetailService;
     private final JwtUtil jwtUtil;
+    private final ProfileService profileService;
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest request) {
@@ -104,5 +106,23 @@ public class AuthController {
                         password
                 )
         );
+    }
+
+    @GetMapping("/is-authenticated")
+    public ResponseEntity<Boolean> isAuthenticated(@CurrentSecurityContext(expression="authentication?.name")String email){
+
+        return ResponseEntity.ok(email!=null);
+    }
+
+
+    @PostMapping("/send-reset-otp")
+    public void sendResetOtp(@RequestParam String email){
+
+        try{
+            profileService.sendResetOtp(email);
+        }
+        catch (Exception ex){
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
+        }
     }
 }
