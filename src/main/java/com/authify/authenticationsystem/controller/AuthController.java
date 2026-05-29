@@ -2,7 +2,9 @@ package com.authify.authenticationsystem.controller;
 
 import com.authify.authenticationsystem.io.AuthRequest;
 import com.authify.authenticationsystem.io.AuthResponse;
+import com.authify.authenticationsystem.io.OtpResponse;
 import com.authify.authenticationsystem.io.ResetPasswordRequest;
+import com.authify.authenticationsystem.io.VerifyOtpResponse;
 import com.authify.authenticationsystem.service.AppUserDetailService;
 import com.authify.authenticationsystem.service.ProfileService;
 import com.authify.authenticationsystem.util.JwtUtil;
@@ -129,11 +131,10 @@ public class AuthController {
     }
 
     @PostMapping("/send-otp")
-    public ResponseEntity<Boolean> sendVerifyOtp(@CurrentSecurityContext(expression = "authentication?.name") String email) {
+    public ResponseEntity<OtpResponse> sendVerifyOtp(@CurrentSecurityContext(expression = "authentication?.name") String email) {
 
         try {
-            profileService.sendOtp(email);
-            return ResponseEntity.ok(true);
+            return ResponseEntity.ok(profileService.sendOtp(email));
         } catch (Exception ex) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
@@ -141,7 +142,7 @@ public class AuthController {
 
 
     @PostMapping("/verify-otp")
-    public void verifyEmail(
+    public ResponseEntity<VerifyOtpResponse> verifyEmail(
             @RequestBody Map<String, Object> request,
             @CurrentSecurityContext(
                     expression = "authentication?.name"
@@ -160,6 +161,15 @@ public class AuthController {
         profileService.verifyOtp(
                 email,
                 request.get("otp").toString()
+        );
+
+        return ResponseEntity.ok(
+                new VerifyOtpResponse(
+                        true,
+                        true,
+                        email,
+                        "Email verified successfully"
+                )
         );
     }
 }

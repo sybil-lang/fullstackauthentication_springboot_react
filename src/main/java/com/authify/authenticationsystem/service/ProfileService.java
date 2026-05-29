@@ -2,6 +2,7 @@ package com.authify.authenticationsystem.service;
 
 import com.authify.authenticationsystem.io.ProfileRequest;
 import com.authify.authenticationsystem.io.ProfileResponse;
+import com.authify.authenticationsystem.io.OtpResponse;
 
 public interface ProfileService {
 
@@ -12,7 +13,7 @@ public interface ProfileService {
 
     void resetPassword(String email,String otp,String newPassword);
 
-    void sendOtp(String email);
+    OtpResponse sendOtp(String email);
     void verifyOtp(String email,String otp);
 
 

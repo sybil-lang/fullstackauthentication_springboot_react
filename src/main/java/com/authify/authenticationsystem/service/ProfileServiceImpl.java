@@ -1,6 +1,7 @@
 package com.authify.authenticationsystem.service;
 
 import com.authify.authenticationsystem.entity.UserEntity;
+import com.authify.authenticationsystem.io.OtpResponse;
 import com.authify.authenticationsystem.io.ProfileRequest;
 import com.authify.authenticationsystem.io.ProfileResponse;
 import com.authify.authenticationsystem.repository.UserRepository;
@@ -118,7 +119,7 @@ public class ProfileServiceImpl implements ProfileService{
 
 
     @Override
-    public void sendOtp(String email) {
+    public OtpResponse sendOtp(String email) {
 
         // Find user by email
         UserEntity existingUser = userRepository
@@ -131,7 +132,12 @@ public class ProfileServiceImpl implements ProfileService{
                 );
 
         if(existingUser.getIsAccountVerified()!=null && existingUser.getIsAccountVerified()){
-            return;
+            return new OtpResponse(
+                    true,
+                    false,
+                    existingUser.getEmail(),
+                    "Account is already verified. OTP was not sent."
+            );
         }
 
         //Generate 6 digit otp
@@ -148,6 +154,12 @@ public class ProfileServiceImpl implements ProfileService{
 
          try{
              emailService.sendOtpEmail(existingUser.getEmail(),otp);
+             return new OtpResponse(
+                     true,
+                     true,
+                     existingUser.getEmail(),
+                     "OTP sent successfully to your registered email"
+             );
          }
          catch(Exception e){
              throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Unable to send OTP email");
